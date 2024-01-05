@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dassey's Per Diem</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <header>
+        <h1>Dassey's Per Diem Calculator</h1>
+    </header>
+
+    <main>
+        <label for="startDate">Start Date:</label>
+        <input type="date" id="startDate">
+
+        <label for="endDate">End Date:</label>
+        <input type="date" id="endDate">
+
+        <label for="amount">Per Diem Amount:</label>
+        <input type="text" id="amount">
+
+        <button id="calculateBtn" onclick="calculatePerDiem()">Calculate</button>
+
+        <textarea id="result" rows="4" cols="50" readonly></textarea>
+    </main>
+
+    <footer>
+        <p>&copy; 2024 Dassey's Per Diem Calculator</p>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
