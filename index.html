@@ -13,7 +13,7 @@
 
     <style>
         #map { height: 600px; width: 100%; }
-        #controls {
+        #search-box {
             position: absolute;
             top: 10px;
             left: 50%;
@@ -23,8 +23,6 @@
             padding: 8px;
             border-radius: 5px;
             box-shadow: 0 0 5px rgba(0,0,0,0.2);
-            display: flex;
-            gap: 10px;
         }
         #address-input {
             width: 250px;
@@ -36,15 +34,9 @@
 </head>
 <body>
 
-    <!-- Control Panel for Search & Map Style Selection -->
-    <div id="controls">
+    <div id="search-box">
         <input type="text" id="address-input" placeholder="Enter address or ZIP code">
         <button onclick="searchLocation()">Search</button>
-        <select id="map-style-selector" onchange="changeMapStyle()">
-            <option value="osm">OpenStreetMap</option>
-            <option value="satellite">Satellite</option>
-            <option value="terrain">Terrain</option>
-        </select>
     </div>
     
     <div id="map"></div>
@@ -60,25 +52,16 @@
         var map = L.map('map').setView([37.8, -96.9], 4); // Center on the US
 
         // Define different base map layers
-        var baseMaps = {
-            "OpenStreetMap": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap contributors'
-            }),
+        var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        });
 
-            "Satellite": L.tileLayer('https://{s}.sat.terrain.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap contributors'
-            }),
+        var grayscale = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            attribution: '© OpenStreetMap, CARTO'
+        });
 
-            "Terrain": L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap, SRTM contributors'
-            })
-        };
-
-        // Set default map layer
-        baseMaps["OpenStreetMap"].addTo(map);
-
-        // Layer control to switch maps
-        L.control.layers(baseMaps).addTo(map);
+        // Set default map to grayscale
+        grayscale.addTo(map);
 
         var marker; // To store the current location marker
 
@@ -110,26 +93,6 @@
                     alert("Location not found. Try a different address or ZIP code.");
                 }
             });
-        }
-
-        // Function to change the base map style
-        function changeMapStyle() {
-            var selectedStyle = document.getElementById("map-style-selector").value;
-            
-            // Remove current layer and add selected one
-            map.eachLayer(layer => {
-                if (layer !== marker) {
-                    map.removeLayer(layer);
-                }
-            });
-
-            if (selectedStyle === "osm") {
-                baseMaps["OpenStreetMap"].addTo(map);
-            } else if (selectedStyle === "satellite") {
-                baseMaps["Satellite"].addTo(map);
-            } else if (selectedStyle === "terrain") {
-                baseMaps["Terrain"].addTo(map);
-            }
         }
 
         // Enable real-time search on pressing Enter
