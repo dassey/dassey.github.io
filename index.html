@@ -3,14 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dark Grayscale US Map with Search</title>
+    <title>Dark Map with ZIP Code County Highlight</title>
     
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     
-    <!-- Leaflet Control Geocoder CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
-
     <style>
         body { margin: 0; }
         #map { height: 100vh; width: 100vw; }
@@ -49,7 +46,7 @@
 <body>
 
     <div id="search-box">
-        <input type="text" id="address-input" placeholder="Enter address or ZIP code">
+        <input type="text" id="address-input" placeholder="Enter ZIP code or address">
         <button onclick="searchLocation()">Search</button>
     </div>
     
@@ -58,24 +55,17 @@
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
-    <!-- Leaflet Control Geocoder JS (For Autocomplete) -->
-    <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
-
     <script>
-        // Initialize the map with a dark grayscale background
         var map = L.map('map').setView([37.8, -96.9], 4);
 
-        // Define dark grayscale basemap
-        var darkGrayscale = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        // Dark Grayscale Basemap
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
             attribution: '© OpenStreetMap, CARTO',
             subdomains: 'abcd',
             maxZoom: 19
         }).addTo(map);
 
-        var marker; // To store the current location marker
-
-        // Initialize Leaflet Geocoder with autocomplete
-        var geocoder = L.Control.Geocoder.nominatim();
+        var marker, countyLayer;
 
         function searchLocation() {
             var address = document.getElementById("address-input").value;
@@ -84,25 +74,68 @@
                 return;
             }
 
-            // Perform geocode search
-            geocoder.geocode(address, function(results) {
-                if (results.length > 0) {
-                    var latlng = results[0].center;
+            // Geocode the ZIP code/address to get coordinates
+            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${address}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.length > 0) {
+                        var lat = data[0].lat;
+                        var lon = data[0].lon;
 
-                    // Move and zoom map
-                    map.setView(latlng, 12);
+                        // Move and zoom map
+                        map.setView([lat, lon], 10);
 
-                    // Add marker
-                    if (marker) {
-                        map.removeLayer(marker);
+                        // Add marker
+                        if (marker) {
+                            map.removeLayer(marker);
+                        }
+                        marker = L.marker([lat, lon]).addTo(map)
+                            .bindPopup(`Location: ${data[0].display_name}`)
+                            .openPopup();
+
+                        // Find and highlight the county
+                        fetchCountyBoundary(lat, lon);
+                    } else {
+                        alert("Location not found. Try a different ZIP code or address.");
                     }
-                    marker = L.marker(latlng).addTo(map)
-                        .bindPopup(`Location: ${results[0].name}`)
-                        .openPopup();
-                } else {
-                    alert("Location not found. Try a different address or ZIP code.");
-                }
-            });
+                })
+                .catch(error => console.error("Error fetching location:", error));
+        }
+
+        function fetchCountyBoundary(lat, lon) {
+            // Reverse Geocode to get County name
+            fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.address && data.address.county) {
+                        var countyName = data.address.county;
+                        console.log("County:", countyName);
+
+                        // Fetch County GeoJSON
+                        fetch(`https://nominatim.openstreetmap.org/search?format=json&polygon_geojson=1&q=${countyName} County`)
+                            .then(response => response.json())
+                            .then(countyData => {
+                                if (countyData.length > 0 && countyData[0].geojson) {
+                                    var countyGeoJSON = countyData[0].geojson;
+
+                                    // Remove previous county layer
+                                    if (countyLayer) {
+                                        map.removeLayer(countyLayer);
+                                    }
+
+                                    // Add new county boundary
+                                    countyLayer = L.geoJSON(countyGeoJSON, {
+                                        style: {
+                                            color: "#ff7800",
+                                            weight: 2,
+                                            fillColor: "#ff7800",
+                                            fillOpacity: 0.2
+                                        }
+                                    }).addTo(map);
+                                }
+                            });
+                    }
+                });
         }
 
         // Enable real-time search on pressing Enter
