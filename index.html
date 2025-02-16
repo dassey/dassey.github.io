@@ -3,100 +3,114 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Per Diem Rate Finder</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <title>Per Diem Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; }
-        #map { height: 500px; width: 100%; margin: 10px 0; }
-        #search-box, #api-key-box { margin: 10px; padding: 5px; width: 300px; }
-        #results { margin-top: 10px; text-align: left; max-width: 600px; margin: auto; }
+        #map { height: 500px; width: 100%; }
+        .info-box { padding: 10px; background: #fff; border-radius: 5px; margin-top: 10px; }
     </style>
 </head>
 <body>
 
-    <h2>Per Diem Rate Finder</h2>
+    <h2>GSA Per Diem Finder</h2>
     
-    <input type="text" id="api-key-box" placeholder="Enter your GSA API Key">
-    <br>
-    <input type="text" id="search-box" placeholder="Enter city, state, or ZIP">
+    <label>API Key:</label>
+    <input type="text" id="apiKeyInput" placeholder="Enter API Key Here" style="width: 300px;">
+    
+    <br><br>
+    
+    <label>Search Location:</label>
+    <input type="text" id="searchInput" placeholder="Enter City, State or ZIP">
     <button onclick="searchLocation()">Search</button>
-    
+
     <div id="map"></div>
-    <div id="results"></div>
 
+    <div class="info-box" id="resultBox">
+        <strong>Per Diem Rates:</strong>
+        <p id="perDiemResults">Enter a location to fetch data.</p>
+    </div>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script>
-        let map = L.map('map').setView([39.8283, -98.5795], 4); // Default center (USA)
-
+        let map = L.map('map').setView([39.8283, -98.5795], 4); // Center US
+        
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; OpenStreetMap contributors'
         }).addTo(map);
 
-        // Map click event to fetch per diem data
-        map.on('click', function (e) {
-            getPerDiemRates(e.latlng.lat, e.latlng.lng, `Lat: ${e.latlng.lat}, Lon: ${e.latlng.lng}`);
-        });
+        async function searchLocation() {
+            const location = document.getElementById("searchInput").value;
+            const apiKey = document.getElementById("apiKeyInput").value;
 
-        // Fetch data when moving the map
-        map.on('moveend', function () {
-            let center = map.getCenter();
-            getPerDiemRates(center.lat, center.lng, "Current map center");
-        });
-
-        function searchLocation() {
-            let query = document.getElementById("search-box").value;
-            if (!query) return alert("Enter a city, state, or ZIP code!");
-
-            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}, USA`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.length === 0) {
-                        alert("Location not found.");
-                        return;
-                    }
-                    let { lat, lon, display_name } = data[0];
-
-                    map.setView([lat, lon], 10);
-                    getPerDiemRates(lat, lon, display_name);
-                })
-                .catch(error => console.error("Geocoding error:", error));
-        }
-
-        function getPerDiemRates(lat, lon, locationName) {
-            let apiKey = document.getElementById("api-key-box").value.trim();
-            if (!apiKey) {
-                alert("Enter your GSA API Key first!");
+            if (!location) {
+                alert("Please enter a location.");
                 return;
             }
 
-            let url = `https://api.gsa.gov/travel/perdiem/v2/rates?latitude=${lat}&longitude=${lon}&api_key=${apiKey}`;
-            fetch(url)
-                .then(response => response.json())
-                .then(data => {
-                    if (!data.rates || data.rates.length === 0) {
-                        alert("No per diem data found for this location.");
-                        return;
-                    }
+            if (!apiKey) {
+                alert("Please enter an API key.");
+                return;
+            }
 
-                    let resultsDiv = document.getElementById("results");
-                    resultsDiv.innerHTML = `<h3>Per Diem Rates for ${locationName}</h3>`;
+            const year = new Date().getFullYear();
+            
+            let apiUrl = "";
+            
+            if (!isNaN(location)) {
+                apiUrl = `https://api.gsa.gov/travel/perdiem/v2/rates/zip/${location}/year/${year}?X-API-KEY=${apiKey}`;
+            } else {
+                const [city, state] = location.split(",");
+                if (!state) {
+                    alert("Please enter in 'City, State' format.");
+                    return;
+                }
+                apiUrl = `https://api.gsa.gov/travel/perdiem/v2/rates/city/${city.trim()}/state/${state.trim()}/year/${year}?X-API-KEY=${apiKey}`;
+            }
 
-                    data.rates.forEach(rate => {
-                        let marker = L.marker([lat, lon]).addTo(map);
-                        let info = `
-                            <b>${rate.state}, ${rate.city} (${rate.zip})</b><br>
-                            Lodging: $${rate.lodging_rate}/night<br>
-                            Meals: $${rate.meals_rate}/day
-                        `;
-                        marker.bindPopup(info).openPopup();
+            try {
+                const response = await fetch(apiUrl);
+                if (!response.ok) throw new Error("Failed to fetch data.");
 
-                        resultsDiv.innerHTML += `
-                            <p><b>${rate.city}, ${rate.state} (${rate.zip})</b><br>
-                            Lodging: $${rate.lodging_rate} | Meals: $${rate.meals_rate}</p>
-                        `;
-                    });
-                })
-                .catch(error => console.error("GSA API error:", error));
+                const data = await response.json();
+                if (data.length === 0) {
+                    alert("No data found for this location.");
+                    return;
+                }
+
+                const { city, state, lodging_rate, meals_rate, zip } = data[0];
+
+                document.getElementById("perDiemResults").innerHTML = `
+                    <strong>${city}, ${state} (ZIP: ${zip})</strong><br>
+                    <strong>Lodging:</strong> $${lodging_rate} <br>
+                    <strong>Meals:</strong> $${meals_rate}
+                `;
+
+                centerMap(city, state);
+            } catch (error) {
+                console.error("Error fetching per diem rates:", error);
+                alert("Error fetching per diem rates.");
+            }
+        }
+
+        async function centerMap(city, state) {
+            const locationQuery = `${city}, ${state}`;
+            const geocodeUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${locationQuery}`;
+
+            try {
+                const response = await fetch(geocodeUrl);
+                const locations = await response.json();
+                if (locations.length > 0) {
+                    const { lat, lon } = locations[0];
+                    map.setView([lat, lon], 10);
+                    L.marker([lat, lon]).addTo(map)
+                        .bindPopup(`<strong>${city}, ${state}</strong>`)
+                        .openPopup();
+                } else {
+                    alert("Could not find location on map.");
+                }
+            } catch (error) {
+                console.error("Error fetching map data:", error);
+            }
         }
     </script>
 
