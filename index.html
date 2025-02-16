@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dark Map with ZIP Code County Highlight</title>
+    <title>Dark Map with ZIP Code County Highlight & Style Selector</title>
     
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
@@ -11,6 +11,8 @@
     <style>
         body { margin: 0; }
         #map { height: 100vh; width: 100vw; }
+        
+        /* Search box styling */
         #search-box {
             position: absolute;
             top: 10px;
@@ -41,13 +43,48 @@
         button:hover {
             background: #666;
         }
+
+        /* Map Style Selector Panel */
+        #map-style-panel {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 1000;
+            background: rgba(30, 30, 30, 0.9);
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            color: white;
+            font-size: 14px;
+        }
+        #map-style-panel select {
+            width: 150px;
+            padding: 5px;
+            background: #222;
+            color: white;
+            border: none;
+            border-radius: 3px;
+        }
     </style>
 </head>
 <body>
 
+    <!-- Search Box -->
     <div id="search-box">
         <input type="text" id="address-input" placeholder="Enter ZIP code or address">
         <button onclick="searchLocation()">Search</button>
+    </div>
+
+    <!-- Map Style Selector Panel -->
+    <div id="map-style-panel">
+        <label for="map-style-selector">Map Style:</label>
+        <select id="map-style-selector" onchange="changeMapStyle()">
+            <option value="dark">Carto Dark Matter</option>
+            <option value="grayscale">Carto Grayscale</option>
+            <option value="streets">OpenStreetMap</option>
+            <option value="terrain">Terrain</option>
+            <option value="satellite">Satellite</option>
+        </select>
     </div>
     
     <div id="map"></div>
@@ -58,12 +95,35 @@
     <script>
         var map = L.map('map').setView([37.8, -96.9], 4);
 
-        // Dark Grayscale Basemap
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-            attribution: '© OpenStreetMap, CARTO',
-            subdomains: 'abcd',
-            maxZoom: 19
-        }).addTo(map);
+        // Define multiple base layers
+        var baseLayers = {
+            "Carto Dark Matter": L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '© OpenStreetMap, CARTO',
+                subdomains: 'abcd',
+                maxZoom: 19
+            }),
+
+            "Carto Grayscale": L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                attribution: '© OpenStreetMap, CARTO',
+                subdomains: 'abcd',
+                maxZoom: 19
+            }),
+
+            "OpenStreetMap": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }),
+
+            "Terrain": L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap, SRTM contributors'
+            }),
+
+            "Satellite": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {  // Replace with Mapbox for better imagery
+                attribution: '© OpenStreetMap contributors'
+            })
+        };
+
+        // Set default map style
+        baseLayers["Carto Dark Matter"].addTo(map);
 
         var marker, countyLayer;
 
@@ -136,6 +196,20 @@
                             });
                     }
                 });
+        }
+
+        function changeMapStyle() {
+            var selectedStyle = document.getElementById("map-style-selector").value;
+
+            // Remove current map layer
+            map.eachLayer(layer => {
+                if (layer !== marker && layer !== countyLayer) {
+                    map.removeLayer(layer);
+                }
+            });
+
+            // Add the selected base layer
+            baseLayers[selectedStyle].addTo(map);
         }
 
         // Enable real-time search on pressing Enter
