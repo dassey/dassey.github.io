@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dark Map with ZIP Code County Highlight & Style Selector</title>
+    <title>US Map with ZIP Code County Highlight</title>
     
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
@@ -43,28 +43,6 @@
         button:hover {
             background: #666;
         }
-
-        /* Map Style Selector Panel */
-        #map-style-panel {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            z-index: 1000;
-            background: rgba(30, 30, 30, 0.9);
-            padding: 10px;
-            border-radius: 5px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.5);
-            color: white;
-            font-size: 14px;
-        }
-        #map-style-panel select {
-            width: 160px;
-            padding: 5px;
-            background: #222;
-            color: white;
-            border: none;
-            border-radius: 3px;
-        }
     </style>
 </head>
 <body>
@@ -75,18 +53,6 @@
         <button onclick="searchLocation()">Search</button>
     </div>
 
-    <!-- Map Style Selector Panel -->
-    <div id="map-style-panel">
-        <label for="map-style-selector">Map Style:</label>
-        <select id="map-style-selector" onchange="changeMapStyle()">
-            <option value="dark">Carto Dark Matter</option>
-            <option value="grayscale">Carto Grayscale</option>
-            <option value="streets">OpenStreetMap</option>
-            <option value="terrain">Terrain</option>
-            <option value="satellite">Satellite</option>
-        </select>
-    </div>
-    
     <div id="map"></div>
 
     <!-- Leaflet JS -->
@@ -95,35 +61,10 @@
     <script>
         var map = L.map('map').setView([37.8, -96.9], 4);
 
-        var baseLayers = {
-            "Carto Dark Matter": L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                attribution: '© OpenStreetMap, CARTO',
-                subdomains: 'abcd',
-                maxZoom: 19
-            }),
-
-            "Carto Grayscale": L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-                attribution: '© OpenStreetMap, CARTO',
-                subdomains: 'abcd',
-                maxZoom: 19
-            }),
-
-            "OpenStreetMap": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap contributors'
-            }),
-
-            "Terrain": L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap, SRTM contributors'
-            }),
-
-            "Satellite": L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
-                attribution: '© Google Satellite',
-                subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
-                maxZoom: 19
-            })
-        };
-
-        baseLayers["Carto Dark Matter"].addTo(map);
+        // Set default map style (OpenStreetMap)
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
 
         var marker, countyLayer;
 
@@ -167,7 +108,7 @@
                         var stateCode = data.results[0].state_code;
                         console.log(`County: ${countyName}, State: ${stateCode}`);
 
-                        fetch(`https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Tracts_Blocks/MapServer/10/query?where=NAME='${countyName}' AND STATE='${stateCode}'&outFields=*&outSR=4326&f=geojson`)
+                        fetch(`https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Counties/MapServer/0/query?where=NAME='${countyName}' AND STATE='${stateCode}'&outFields=*&outSR=4326&f=geojson`)
                             .then(response => response.json())
                             .then(countyData => {
                                 if (countyData && countyData.features.length > 0) {
@@ -187,16 +128,6 @@
                             });
                     }
                 });
-        }
-
-        function changeMapStyle() {
-            var selectedStyle = document.getElementById("map-style-selector").value;
-            map.eachLayer(layer => {
-                if (layer !== marker && layer !== countyLayer) {
-                    map.removeLayer(layer);
-                }
-            });
-            baseLayers[selectedStyle].addTo(map);
         }
 
         document.getElementById("address-input").addEventListener("keyup", function(event) {
