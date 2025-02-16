@@ -1,38 +1,78 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dassey's Per Diem</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>Interactive US Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        #map { height: 600px; width: 100%; }
+        #search-box {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            background: white;
+            padding: 8px;
+            border-radius: 5px;
+            box-shadow: 0 0 5px rgba(0,0,0,0.2);
+        }
+    </style>
 </head>
-
 <body>
-    <header>
-        <h1>Dassey's Per Diem Calculator</h1>
-    </header>
 
-    <main>
-        <label for="startDate">Start Date:</label>
-        <input type="date" id="startDate">
+    <div id="search-box">
+        <input type="text" id="address-input" placeholder="Enter address or ZIP code">
+        <button onclick="searchLocation()">Search</button>
+    </div>
+    
+    <div id="map"></div>
 
-        <label for="endDate">End Date:</label>
-        <input type="date" id="endDate">
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+        // Initialize the map
+        var map = L.map('map').setView([37.8, -96.9], 4); // Center on the US
 
-        <label for="zipCode">Zip Code:</label>
-        <input type="text" id="zipCode">
-            
-        <button id="calculateBtn" onclick="calculatePerDiem()">Calculate</button>
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
 
-        <textarea id="result" rows="4" cols="50" readonly></textarea>
-    </main>
+        var marker; // To store the current location marker
 
-    <footer>
-        <p>&copy; 2024 Dassey's Per Diem Calculator</p>
-    </footer>
+        function searchLocation() {
+            var address = document.getElementById("address-input").value;
+            if (!address) {
+                alert("Please enter an address or ZIP code.");
+                return;
+            }
 
-    <script src="script.js"></script>
+            // Use Nominatim API to get the location
+            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${address}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.length > 0) {
+                        var lat = data[0].lat;
+                        var lon = data[0].lon;
+
+                        // Move and zoom map
+                        map.setView([lat, lon], 12);
+
+                        // Add marker
+                        if (marker) {
+                            map.removeLayer(marker);
+                        }
+                        marker = L.marker([lat, lon]).addTo(map)
+                            .bindPopup(`Location: ${data[0].display_name}`)
+                            .openPopup();
+                    } else {
+                        alert("Location not found. Try a different address or ZIP code.");
+                    }
+                })
+                .catch(error => console.error("Error fetching location:", error));
+        }
+    </script>
+
 </body>
-
 </html>
