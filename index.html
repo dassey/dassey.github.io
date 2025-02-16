@@ -4,10 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Interactive US Map</title>
+    
+    <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    
+    <!-- Leaflet Control Geocoder CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+
     <style>
         #map { height: 600px; width: 100%; }
-        #search-box {
+        #controls {
             position: absolute;
             top: 10px;
             left: 50%;
@@ -17,29 +23,67 @@
             padding: 8px;
             border-radius: 5px;
             box-shadow: 0 0 5px rgba(0,0,0,0.2);
+            display: flex;
+            gap: 10px;
+        }
+        #address-input {
+            width: 250px;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
         }
     </style>
 </head>
 <body>
 
-    <div id="search-box">
+    <!-- Control Panel for Search & Map Style Selection -->
+    <div id="controls">
         <input type="text" id="address-input" placeholder="Enter address or ZIP code">
         <button onclick="searchLocation()">Search</button>
+        <select id="map-style-selector" onchange="changeMapStyle()">
+            <option value="osm">OpenStreetMap</option>
+            <option value="satellite">Satellite</option>
+            <option value="terrain">Terrain</option>
+        </select>
     </div>
     
     <div id="map"></div>
 
+    <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+    <!-- Leaflet Control Geocoder JS (For Autocomplete) -->
+    <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+
     <script>
         // Initialize the map
         var map = L.map('map').setView([37.8, -96.9], 4); // Center on the US
 
-        // Add OpenStreetMap tiles
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors'
-        }).addTo(map);
+        // Define different base map layers
+        var baseMaps = {
+            "OpenStreetMap": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }),
+
+            "Satellite": L.tileLayer('https://{s}.sat.terrain.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }),
+
+            "Terrain": L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap, SRTM contributors'
+            })
+        };
+
+        // Set default map layer
+        baseMaps["OpenStreetMap"].addTo(map);
+
+        // Layer control to switch maps
+        L.control.layers(baseMaps).addTo(map);
 
         var marker; // To store the current location marker
+
+        // Initialize Leaflet Geocoder with autocomplete
+        var geocoder = L.Control.Geocoder.nominatim();
 
         function searchLocation() {
             var address = document.getElementById("address-input").value;
@@ -48,30 +92,52 @@
                 return;
             }
 
-            // Use Nominatim API to get the location
-            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${address}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.length > 0) {
-                        var lat = data[0].lat;
-                        var lon = data[0].lon;
+            geocoder.geocode(address, function(results) {
+                if (results.length > 0) {
+                    var latlng = results[0].center;
 
-                        // Move and zoom map
-                        map.setView([lat, lon], 12);
+                    // Move and zoom map
+                    map.setView(latlng, 12);
 
-                        // Add marker
-                        if (marker) {
-                            map.removeLayer(marker);
-                        }
-                        marker = L.marker([lat, lon]).addTo(map)
-                            .bindPopup(`Location: ${data[0].display_name}`)
-                            .openPopup();
-                    } else {
-                        alert("Location not found. Try a different address or ZIP code.");
+                    // Add marker
+                    if (marker) {
+                        map.removeLayer(marker);
                     }
-                })
-                .catch(error => console.error("Error fetching location:", error));
+                    marker = L.marker(latlng).addTo(map)
+                        .bindPopup(`Location: ${results[0].name}`)
+                        .openPopup();
+                } else {
+                    alert("Location not found. Try a different address or ZIP code.");
+                }
+            });
         }
+
+        // Function to change the base map style
+        function changeMapStyle() {
+            var selectedStyle = document.getElementById("map-style-selector").value;
+            
+            // Remove current layer and add selected one
+            map.eachLayer(layer => {
+                if (layer !== marker) {
+                    map.removeLayer(layer);
+                }
+            });
+
+            if (selectedStyle === "osm") {
+                baseMaps["OpenStreetMap"].addTo(map);
+            } else if (selectedStyle === "satellite") {
+                baseMaps["Satellite"].addTo(map);
+            } else if (selectedStyle === "terrain") {
+                baseMaps["Terrain"].addTo(map);
+            }
+        }
+
+        // Enable real-time search on pressing Enter
+        document.getElementById("address-input").addEventListener("keyup", function(event) {
+            if (event.key === "Enter") {
+                searchLocation();
+            }
+        });
     </script>
 
 </body>
