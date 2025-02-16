@@ -43,6 +43,28 @@
         button:hover {
             background: #666;
         }
+
+        /* Map Style Selector Panel */
+        #map-style-panel {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+            background: rgba(30, 30, 30, 0.9);
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            color: white;
+            font-size: 14px;
+        }
+        #map-style-panel select {
+            width: 160px;
+            padding: 5px;
+            background: #222;
+            color: white;
+            border: none;
+            border-radius: 3px;
+        }
     </style>
 </head>
 <body>
@@ -53,6 +75,18 @@
         <button onclick="searchLocation()">Search</button>
     </div>
 
+    <!-- Map Style Selector Panel -->
+    <div id="map-style-panel">
+        <label for="map-style-selector">Map Style:</label>
+        <select id="map-style-selector" onchange="changeMapStyle()">
+            <option value="dark">Carto Dark Matter</option>
+            <option value="grayscale">Carto Grayscale</option>
+            <option value="streets">OpenStreetMap</option>
+            <option value="terrain">Terrain</option>
+            <option value="satellite">Satellite</option>
+        </select>
+    </div>
+    
     <div id="map"></div>
 
     <!-- Leaflet JS -->
@@ -61,12 +95,35 @@
     <script>
         var map = L.map('map').setView([37.8, -96.9], 4);
 
-        // Define default dark basemap
-        var darkLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-            attribution: '© OpenStreetMap, CARTO',
-            subdomains: 'abcd',
-            maxZoom: 19
-        }).addTo(map);
+        var baseLayers = {
+            "Carto Dark Matter": L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '© OpenStreetMap, CARTO',
+                subdomains: 'abcd',
+                maxZoom: 19
+            }),
+
+            "Carto Grayscale": L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                attribution: '© OpenStreetMap, CARTO',
+                subdomains: 'abcd',
+                maxZoom: 19
+            }),
+
+            "OpenStreetMap": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }),
+
+            "Terrain": L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap, SRTM contributors'
+            }),
+
+            "Satellite": L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+                attribution: '© Google Satellite',
+                subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+                maxZoom: 19
+            })
+        };
+
+        baseLayers["Carto Dark Matter"].addTo(map);
 
         var marker, countyLayer;
 
@@ -77,7 +134,6 @@
                 return;
             }
 
-            // Restrict geocoding to US ZIP codes and locations
             fetch(`https://nominatim.openstreetmap.org/search?format=json&countrycodes=us&q=${address}`)
                 .then(response => response.json())
                 .then(data => {
@@ -85,10 +141,8 @@
                         var lat = data[0].lat;
                         var lon = data[0].lon;
 
-                        // Move and zoom map
                         map.setView([lat, lon], 10);
 
-                        // Add marker
                         if (marker) {
                             map.removeLayer(marker);
                         }
@@ -96,7 +150,6 @@
                             .bindPopup(`Location: ${data[0].display_name}`)
                             .openPopup();
 
-                        // Find and highlight the county
                         fetchCountyBoundary(lat, lon);
                     } else {
                         alert("Location not found. Try a different ZIP code or address.");
@@ -106,28 +159,23 @@
         }
 
         function fetchCountyBoundary(lat, lon) {
-            // Reverse Geocode to get County name
-            fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&countrycodes=us`)
+            fetch(`https://geo.fcc.gov/api/census/area?lat=${lat}&lon=${lon}&format=json`)
                 .then(response => response.json())
                 .then(data => {
-                    if (data.address && data.address.county) {
-                        var countyName = data.address.county;
-                        console.log("County:", countyName);
+                    if (data.results.length > 0) {
+                        var countyName = data.results[0].county_name;
+                        var stateCode = data.results[0].state_code;
+                        console.log(`County: ${countyName}, State: ${stateCode}`);
 
-                        // Fetch County GeoJSON
-                        fetch(`https://nominatim.openstreetmap.org/search?format=json&polygon_geojson=1&q=${countyName} County, USA`)
+                        fetch(`https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Tracts_Blocks/MapServer/10/query?where=NAME='${countyName}' AND STATE='${stateCode}'&outFields=*&outSR=4326&f=geojson`)
                             .then(response => response.json())
                             .then(countyData => {
-                                if (countyData.length > 0 && countyData[0].geojson) {
-                                    var countyGeoJSON = countyData[0].geojson;
-
-                                    // Remove previous county layer
+                                if (countyData && countyData.features.length > 0) {
                                     if (countyLayer) {
                                         map.removeLayer(countyLayer);
                                     }
 
-                                    // Add new county boundary
-                                    countyLayer = L.geoJSON(countyGeoJSON, {
+                                    countyLayer = L.geoJSON(countyData, {
                                         style: {
                                             color: "#ff7800",
                                             weight: 2,
@@ -141,7 +189,16 @@
                 });
         }
 
-        // Enable real-time search on pressing Enter
+        function changeMapStyle() {
+            var selectedStyle = document.getElementById("map-style-selector").value;
+            map.eachLayer(layer => {
+                if (layer !== marker && layer !== countyLayer) {
+                    map.removeLayer(layer);
+                }
+            });
+            baseLayers[selectedStyle].addTo(map);
+        }
+
         document.getElementById("address-input").addEventListener("keyup", function(event) {
             if (event.key === "Enter") {
                 searchLocation();
