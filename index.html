@@ -3,138 +3,80 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>US Map with ZIP Code County Highlight</title>
-    
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-    
+    <title>Per Diem Rate Finder</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <style>
-        body { margin: 0; }
-        #map { height: 100vh; width: 100vw; }
-        
-        /* Search box styling */
-        #search-box {
-            position: absolute;
-            top: 10px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 1000;
-            background: rgba(30, 30, 30, 0.9);
-            padding: 10px;
-            border-radius: 5px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.5);
-        }
-        #address-input {
-            width: 250px;
-            padding: 5px;
-            border: none;
-            border-radius: 3px;
-            background: #222;
-            color: white;
-        }
-        button {
-            padding: 5px 10px;
-            border: none;
-            background: #444;
-            color: white;
-            cursor: pointer;
-            border-radius: 3px;
-        }
-        button:hover {
-            background: #666;
-        }
+        body { font-family: Arial, sans-serif; text-align: center; }
+        #map { height: 500px; width: 100%; margin: 10px 0; }
+        #search-box { margin: 10px; padding: 5px; width: 300px; }
+        #results { margin-top: 10px; text-align: left; max-width: 600px; margin: auto; }
     </style>
 </head>
 <body>
 
-    <!-- Search Box -->
-    <div id="search-box">
-        <input type="text" id="address-input" placeholder="Enter ZIP code or address">
-        <button onclick="searchLocation()">Search</button>
-    </div>
-
+    <h2>Per Diem Rate Finder</h2>
+    <input type="text" id="search-box" placeholder="Enter city, state, or ZIP">
+    <button onclick="searchLocation()">Search</button>
     <div id="map"></div>
-
-    <!-- Leaflet JS -->
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <div id="results"></div>
 
     <script>
-        var map = L.map('map').setView([37.8, -96.9], 4);
+        const API_KEY = "XKQWJqOg9u2AkwVmDD19pePbBIAdFwrkgQtbUcfk";
+        let map = L.map('map').setView([39.8283, -98.5795], 4); // Default center (USA)
 
-        // Set default map style (OpenStreetMap)
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors'
+            attribution: '&copy; OpenStreetMap contributors'
         }).addTo(map);
 
-        var marker, countyLayer;
-
         function searchLocation() {
-            var address = document.getElementById("address-input").value;
-            if (!address) {
-                alert("Please enter an address or ZIP code.");
-                return;
-            }
+            let query = document.getElementById("search-box").value;
+            if (!query) return alert("Enter a city, state, or ZIP code!");
 
-            fetch(`https://nominatim.openstreetmap.org/search?format=json&countrycodes=us&q=${address}`)
+            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}`)
                 .then(response => response.json())
                 .then(data => {
-                    if (data.length > 0) {
-                        var lat = data[0].lat;
-                        var lon = data[0].lon;
-
-                        map.setView([lat, lon], 10);
-
-                        if (marker) {
-                            map.removeLayer(marker);
-                        }
-                        marker = L.marker([lat, lon]).addTo(map)
-                            .bindPopup(`Location: ${data[0].display_name}`)
-                            .openPopup();
-
-                        fetchCountyBoundary(lat, lon);
-                    } else {
-                        alert("Location not found. Try a different ZIP code or address.");
+                    if (data.length === 0) {
+                        alert("Location not found.");
+                        return;
                     }
+                    let { lat, lon, display_name } = data[0];
+
+                    map.setView([lat, lon], 10);
+                    getPerDiemRates(lat, lon, display_name);
                 })
-                .catch(error => console.error("Error fetching location:", error));
+                .catch(error => console.error("Geocoding error:", error));
         }
 
-        function fetchCountyBoundary(lat, lon) {
-            fetch(`https://geo.fcc.gov/api/census/area?lat=${lat}&lon=${lon}&format=json`)
+        function getPerDiemRates(lat, lon, locationName) {
+            fetch(`https://api.gsa.gov/travel/perdiem/v2/rates?latitude=${lat}&longitude=${lon}&api_key=${API_KEY}`)
                 .then(response => response.json())
                 .then(data => {
-                    if (data.results.length > 0) {
-                        var countyName = data.results[0].county_name;
-                        var stateCode = data.results[0].state_code;
-                        console.log(`County: ${countyName}, State: ${stateCode}`);
-
-                        fetch(`https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Counties/MapServer/0/query?where=NAME='${countyName}' AND STATE='${stateCode}'&outFields=*&outSR=4326&f=geojson`)
-                            .then(response => response.json())
-                            .then(countyData => {
-                                if (countyData && countyData.features.length > 0) {
-                                    if (countyLayer) {
-                                        map.removeLayer(countyLayer);
-                                    }
-
-                                    countyLayer = L.geoJSON(countyData, {
-                                        style: {
-                                            color: "#ff7800",
-                                            weight: 2,
-                                            fillColor: "#ff7800",
-                                            fillOpacity: 0.2
-                                        }
-                                    }).addTo(map);
-                                }
-                            });
+                    if (!data.rates || data.rates.length === 0) {
+                        alert("No per diem data found for this location.");
+                        return;
                     }
-                });
-        }
 
-        document.getElementById("address-input").addEventListener("keyup", function(event) {
-            if (event.key === "Enter") {
-                searchLocation();
-            }
-        });
+                    let resultsDiv = document.getElementById("results");
+                    resultsDiv.innerHTML = `<h3>Per Diem Rates for ${locationName}</h3>`;
+
+                    data.rates.forEach(rate => {
+                        let marker = L.marker([lat, lon]).addTo(map);
+                        let info = `
+                            <b>${rate.state}, ${rate.city} (${rate.zip})</b><br>
+                            Lodging: $${rate.lodging_rate}/night<br>
+                            Meals: $${rate.meals_rate}/day
+                        `;
+                        marker.bindPopup(info).openPopup();
+
+                        resultsDiv.innerHTML += `
+                            <p><b>${rate.city}, ${rate.state} (${rate.zip})</b><br>
+                            Lodging: $${rate.lodging_rate} | Meals: $${rate.meals_rate}</p>
+                        `;
+                    });
+                })
+                .catch(error => console.error("GSA API error:", error));
+        }
     </script>
 
 </body>
