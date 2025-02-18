@@ -5,114 +5,171 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Per Diem Map</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/flatgeobuf/dist/flatgeobuf-geojson.min.js"></script>
     <style>
-        #map { height: 500px; width: 100%; }
-        .info-box { padding: 10px; background: #fff; border-radius: 5px; margin-top: 10px; }
+        #map { height: 100vh; width: 100%; }
+        #search-container {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            padding: 8px;
+            z-index: 1000;
+            border-radius: 5px;
+            box-shadow: 0px 2px 5px rgba(0,0,0,0.3);
+        }
+        input { padding: 5px; width: 200px; }
+        button { padding: 5px; cursor: pointer; }
+        
+        .label-text {
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 12px;
+            text-align: center;
+            width: auto;
+            height: auto;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border: 1px solid rgba(0, 0, 0, 0.3);
+            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
+            line-height: 1.2;
+        }
     </style>
 </head>
 <body>
-
-    <h2>GSA Per Diem Finder</h2>
-    
-    <label>API Key:</label>
-    <input type="text" id="apiKeyInput" placeholder="Enter API Key Here" style="width: 300px;">
-    
-    <br><br>
-    
-    <label>Search Location:</label>
-    <input type="text" id="searchInput" placeholder="Enter City, State or ZIP">
-    <button onclick="searchLocation()">Search</button>
-
+    <div id="search-container">
+        <input type="text" id="searchBox" placeholder="Enter ZIP or City">
+        <button onclick="searchArea()">Search</button>
+    </div>
     <div id="map"></div>
 
-    <div class="info-box" id="resultBox">
-        <strong>Per Diem Rates:</strong>
-        <p id="perDiemResults">Enter a location to fetch data.</p>
-    </div>
-
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script>
-        let map = L.map('map').setView([39.8283, -98.5795], 4); // Center US
-        
+        document.getElementById("searchBox").addEventListener("keypress", function(event) {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                searchArea();
+            }
+        });
+
+        var map = L.map('map').setView([39.0997, -94.5786], 5);
+        var geojsonLayer;
+        var labelLayer = L.layerGroup().addTo(map);
+
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap contributors'
+            attribution: '© OpenStreetMap contributors'
         }).addTo(map);
 
-        async function searchLocation() {
-            const location = document.getElementById("searchInput").value;
-            const apiKey = document.getElementById("apiKeyInput").value;
+        let perDiemData = null;
 
-            if (!location) {
-                alert("Please enter a location.");
-                return;
-            }
+        // 🔹 Load Per Diem JSON Data (Compressed GZ File)
+		async function loadPerDiemData() {
+			if (!perDiemData) {
+				const response = await fetch("per_diem_data.json.gz");
 
-            if (!apiKey) {
-                alert("Please enter an API key.");
-                return;
-            }
+				// If GitHub serves it correctly, browsers auto-decompress it
+				const jsonText = await response.text();
+				
+				try {
+					perDiemData = JSON.parse(jsonText);
+				} catch (error) {
+					console.error("Failed to parse JSON. GitHub may not be serving .gz correctly.", error);
+				}
+			}
+		}
 
-            const year = new Date().getFullYear();
+
+        // 🔹 Load FlatGeobuf ZIP Boundaries
+        async function loadZipBoundaries(zip) {
+            const response = await fetch("per_diem_poly.fgb");
+            const arrayBuffer = await response.arrayBuffer();
+            const geojson = await flatgeobuf.deserialize(arrayBuffer);
             
-            let apiUrl = "";
-            
-            if (!isNaN(location)) {
-                apiUrl = `https://api.gsa.gov/travel/perdiem/v2/rates/zip/${location}/year/${year}?X-API-KEY=${apiKey}`;
-            } else {
-                const [city, state] = location.split(",");
-                if (!state) {
-                    alert("Please enter in 'City, State' format.");
-                    return;
-                }
-                apiUrl = `https://api.gsa.gov/travel/perdiem/v2/rates/city/${city.trim()}/state/${state.trim()}/year/${year}?X-API-KEY=${apiKey}`;
-            }
-
-            try {
-                const response = await fetch(apiUrl);
-                if (!response.ok) throw new Error("Failed to fetch data.");
-
-                const data = await response.json();
-                if (data.length === 0) {
-                    alert("No data found for this location.");
-                    return;
-                }
-
-                const { city, state, lodging_rate, meals_rate, zip } = data[0];
-
-                document.getElementById("perDiemResults").innerHTML = `
-                    <strong>${city}, ${state} (ZIP: ${zip})</strong><br>
-                    <strong>Lodging:</strong> $${lodging_rate} <br>
-                    <strong>Meals:</strong> $${meals_rate}
-                `;
-
-                centerMap(city, state);
-            } catch (error) {
-                console.error("Error fetching per diem rates:", error);
-                alert("Error fetching per diem rates.");
-            }
+            return geojson.features.find(feature => feature.properties.ZCTA5CE20 === zip);
         }
 
-        async function centerMap(city, state) {
-            const locationQuery = `${city}, ${state}`;
-            const geocodeUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${locationQuery}`;
+        // 🔹 Get Current Month for Per Diem Lookup
+        function getCurrentMonth() {
+            const monthNames = ["Oct", "Nov", "Dec", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep"];
+            return monthNames[new Date().getMonth()];
+        }
 
-            try {
-                const response = await fetch(geocodeUrl);
-                const locations = await response.json();
-                if (locations.length > 0) {
-                    const { lat, lon } = locations[0];
-                    map.setView([lat, lon], 10);
-                    L.marker([lat, lon]).addTo(map)
-                        .bindPopup(`<strong>${city}, ${state}</strong>`)
-                        .openPopup();
-                } else {
-                    alert("Could not find location on map.");
-                }
-            } catch (error) {
-                console.error("Error fetching map data:", error);
+        // 🔹 Search Function
+        async function searchArea() {
+            var query = document.getElementById("searchBox").value.trim().toLowerCase();
+            if (!query) return;
+
+            await loadPerDiemData();  // Ensure JSON is loaded
+
+            let matchedZip = null;
+            let matchedPerDiem = null;
+
+            // 🔹 Search by ZIP Code
+            if (perDiemData.zip_lookup[query]) {
+                matchedZip = query;
+                matchedPerDiem = perDiemData.zip_lookup[query];
             }
+            // 🔹 Search by City + State
+            else if (perDiemData.city_lookup[query]) {
+                let possibleZips = perDiemData.city_lookup[query];
+                if (possibleZips.length === 1) {
+                    matchedZip = possibleZips[0];
+                    matchedPerDiem = perDiemData.zip_lookup[matchedZip];
+                } else {
+                    alert("Multiple ZIP codes found. Please enter a ZIP code.");
+                    return;
+                }
+            }
+
+            if (!matchedZip) {
+                alert("No matching ZIP or city found.");
+                return;
+            }
+
+            // 🔹 Load ZIP boundary from FlatGeobuf
+            const zipBoundary = await loadZipBoundaries(matchedZip);
+            if (!zipBoundary) {
+                alert("ZIP boundary not found.");
+                return;
+            }
+
+            if (geojsonLayer) map.removeLayer(geojsonLayer);
+            labelLayer.clearLayers();
+
+            const currentMonth = getCurrentMonth();
+            let perDiemRate = matchedPerDiem ? matchedPerDiem[0][currentMonth] || "N/A" : "N/A";
+
+            geojsonLayer = L.geoJSON(zipBoundary, {
+                style: { color: "blue", weight: 1, fillOpacity: 0.5 },
+                onEachFeature: function (feature, layer) {
+                    let zip = feature.properties.ZCTA5CE20;
+                    layer.bindPopup(`<b>ZIP Code:</b> ${zip}<br><b>Per Diem (${currentMonth}):</b> $${perDiemRate}`);
+                    addLabel(layer, zip, perDiemRate);
+                }
+            }).addTo(map);
+
+            map.fitBounds(geojsonLayer.getBounds());
+        }
+
+        // 🔹 Add Label on the Map
+        function addLabel(layer, zip, perDiemRate) {
+            if (!layer.getBounds) return;
+
+            var center = layer.getBounds().getCenter();
+            var label = L.marker(center, {
+                icon: L.divIcon({
+                    className: 'label-text',
+                    html: `<b>ZIP:</b> ${zip}<br><b>Lodging:</b> $${perDiemRate}`,
+                    iconSize: [110, 45],
+                    iconAnchor: [55, 22]
+                })
+            });
+
+            labelLayer.addLayer(label);
         }
     </script>
-
 </body>
 </html>
