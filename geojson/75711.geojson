@@ -1,0 +1,8 @@
+{
+"type": "FeatureCollection",
+"name": "75711",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:EPSG::4269" } },
+"features": [
+{ "type": "Feature", "properties": { "ZCTA5CE20": "75711" }, "geometry": { "type": "Polygon", "coordinates": [ [ [ -95.285506, 32.337638 ], [ -95.283182, 32.33764 ], [ -95.282146, 32.337654 ], [ -95.282129, 32.336323 ], [ -95.285479, 32.336294 ], [ -95.285506, 32.337638 ] ] ] } }
+]
+}
