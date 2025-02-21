@@ -1,175 +1,334 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Per Diem Map</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-    <script src="https://unpkg.com/flatgeobuf/dist/flatgeobuf-geojson.min.js"></script>
-    <style>
-        #map { height: 100vh; width: 100%; }
-        #search-container {
-            position: absolute;
-            top: 10px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: white;
-            padding: 8px;
-            z-index: 1000;
-            border-radius: 5px;
-            box-shadow: 0px 2px 5px rgba(0,0,0,0.3);
-        }
-        input { padding: 5px; width: 200px; }
-        button { padding: 5px; cursor: pointer; }
-        
-        .label-text {
-            background-color: rgba(255, 255, 255, 0.9);
-            padding: 4px 8px;
-            border-radius: 6px;
-            font-size: 12px;
-            text-align: center;
-            width: auto;
-            height: auto;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            border: 1px solid rgba(0, 0, 0, 0.3);
-            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
-            line-height: 1.2;
-        }
-    </style>
+  <meta charset="utf-8"/>
+  <title>GSA Per Diem Lookup</title>
+  
+  <!-- Leaflet CSS -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css"
+  />
+  
+  <!-- Bootstrap CSS -->
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+  />
+
+  <style>
+    body {
+      margin: 20px;
+    }
+    #map {
+      width: 100%;
+      height: 500px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    #data-container {
+      height: 500px;
+      overflow-y: auto;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      padding: 10px;
+      background: #f8f9fa;
+    }
+    .month-section {
+      padding: 5px;
+      margin-bottom: 5px;
+      background: white;
+      border-radius: 4px;
+      border: 1px solid #ddd;
+    }
+  </style>
 </head>
 <body>
-    <div id="search-container">
-        <input type="text" id="searchBox" placeholder="Enter ZIP or City">
-        <button onclick="searchArea()">Search</button>
+  <h1 class="mb-4 text-center">GSA Per Diem Lookup</h1>
+
+  <div class="container">
+    <div class="row g-3 align-items-end">
+      <div class="col-md-3">
+        <label for="city" class="form-label">City:</label>
+        <input type="text" id="city" class="form-control" placeholder="e.g. Boston">
+      </div>
+      <div class="col-md-2">
+        <label for="state" class="form-label">State (2-letter):</label>
+        <input type="text" id="state" class="form-control" placeholder="e.g. MA">
+      </div>
+      <div class="col-md-2">
+        <label for="zip" class="form-label">Zip:</label>
+        <input type="text" id="zip" class="form-control" placeholder="e.g. 02108">
+      </div>
+      <div class="col-md-2">
+        <label for="year" class="form-label">Year:</label>
+        <input type="number" id="year" class="form-control" value="2025">
+      </div>
+      <div class="col-md-2">
+        <button id="lookupBtn" class="btn btn-primary w-100">Lookup</button>
+      </div>
     </div>
-    <div id="map"></div>
 
-    <script>
-        document.getElementById("searchBox").addEventListener("keypress", function(event) {
-            if (event.key === "Enter") {
-                event.preventDefault();
-                searchArea();
-            }
-        });
+    <div class="row mt-4">
+      <div class="col-md-8">
+        <div id="map"></div>
+      </div>
+      <div class="col-md-4">
+        <div id="data-container">
+          <h4>Per Diem Rates</h4>
+          <div id="results"></div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-        var map = L.map('map').setView([39.0997, -94.5786], 5);
-        var geojsonLayer;
-        var labelLayer = L.layerGroup().addTo(map);
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors'
+<script>
+// ============================
+// Cloudflare Worker API Setup
+// ============================
+const workerURL = "https://bushes.dassey.workers.dev/"; 
+
+// ============================
+// Map Initialization
+// ============================
+const map = L.map("map").setView([39.8283, -98.5795], 4);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19 }).addTo(map);
+
+let geoJsonLayer = null;
+
+// ============================
+// UI Elements and Event Listeners
+// ============================
+const lookupBtn = document.getElementById("lookupBtn");
+const cityInput = document.getElementById("city");
+const stateInput = document.getElementById("state");
+const zipInput = document.getElementById("zip");
+const yearInput = document.getElementById("year");
+const resultsDiv = document.getElementById("results");
+
+lookupBtn.addEventListener("click", async () => {
+    let city = cityInput.value.trim();
+    let state = stateInput.value.trim().toUpperCase();
+    let zip = zipInput.value.trim();
+    let year = yearInput.value.trim() || new Date().getFullYear();
+
+    resultsDiv.innerHTML = "";
+    clearMapLayers();
+
+    let queryParams = new URLSearchParams({ city, state, zip, year }).toString();
+    let endpoint = `${workerURL}?${queryParams}`;
+
+    try {
+        const response = await fetch(endpoint);
+        const gsaData = await response.json();
+
+        if (!gsaData || !gsaData.rates || !gsaData.rates.length) {
+            resultsDiv.innerHTML = "<p class='text-warning'>No per diem data found.</p>";
+            return;
+        }
+
+        displayPerDiemData(gsaData.rates[0]);
+
+        if (zip) {
+            await loadZipPolygon(zip);
+        } else if (city && state) {
+            await loadCityPolygon(city, state);
+        }
+    } catch (err) {
+        resultsDiv.innerHTML = "<p class='text-danger'>API request failed.</p>";
+    }
+});
+
+// ============================
+// Fetch City Polygon Data
+// ============================
+async function getCityPolygon(city, state) {
+    const nominatimUrl = `https://nominatim.openstreetmap.org/search?city=${encodeURIComponent(city)}&state=${encodeURIComponent(state)}&format=json&polygon_geojson=1`;
+
+    try {
+        const response = await fetch(nominatimUrl);
+        const data = await response.json();
+        
+        if (data.length > 0 && data[0].geojson) {
+            return { geojson: data[0].geojson, lat: data[0].lat, lon: data[0].lon };
+        }
+    } catch (err) {
+        console.error("Error fetching city polygon:", err);
+    }
+    return null;
+}
+
+// ============================
+// Load City Polygon Onto Map
+// ============================
+async function loadCityPolygon(city, state) {
+    const cityData = await getCityPolygon(city, state);
+    
+    if (cityData) {
+        if (geoJsonLayer) {
+            map.removeLayer(geoJsonLayer);
+        }
+
+        geoJsonLayer = L.geoJSON(cityData.geojson, {
+            style: { color: "blue", weight: 2, opacity: 0.6, fillOpacity: 0.2 }
         }).addTo(map);
 
-        let perDiemData = null;
+        map.fitBounds(geoJsonLayer.getBounds());
+    } else {
+        console.warn("No polygon found for", city, state);
+    }
+}
 
-        // 🔹 Load Per Diem JSON Data (Compressed GZ File)
-		async function loadPerDiemData() {
-			if (!perDiemData) {
-				const response = await fetch("per_diem_data.json.gz");
+// ============================
+// Display Per Diem Data in UI
+// ============================
+function displayPerDiemData(rateData) {
+    const rateInfo = rateData.rate[0];
+    const meals = rateInfo.meals || "N/A";
+    const lodgingData = rateInfo.months ? rateInfo.months.month : [];
 
-				// If GitHub serves it correctly, browsers auto-decompress it
-				const jsonText = await response.text();
-				
-				try {
-					perDiemData = JSON.parse(jsonText);
-				} catch (error) {
-					console.error("Failed to parse JSON. GitHub may not be serving .gz correctly.", error);
-				}
-			}
-		}
+    resultsDiv.innerHTML = `
+      <p><strong>City:</strong> ${rateInfo.city || "Standard Rate"}</p>
+      <p><strong>State:</strong> ${rateData.state}</p>
+      <p><strong>County:</strong> ${rateInfo.county || "N/A"}</p>
+      <p><strong>Meals (M&IE):</strong> $${meals}</p>
+      <h5>Monthly Lodging Rates:</h5>
+    `;
 
+    if (lodgingData.length > 0) {
+        lodgingData.forEach(monthData => {
+            resultsDiv.innerHTML += `
+              <div class="month-section">
+                <h6>${monthData.long}</h6>
+                <p><strong>Lodging:</strong> $${monthData.value}</p>
+              </div>
+            `;
+        });
+    } else {
+        resultsDiv.innerHTML += `<p class="text-muted">No monthly lodging data available.</p>`;
+    }
+}
 
-        // 🔹 Load FlatGeobuf ZIP Boundaries
-        async function loadZipBoundaries(zip) {
-            const response = await fetch("per_diem_poly.fgb");
-            const arrayBuffer = await response.arrayBuffer();
-            const geojson = await flatgeobuf.deserialize(arrayBuffer);
-            
-            return geojson.features.find(feature => feature.properties.ZCTA5CE20 === zip);
-        }
+// ============================
+// Clear Map Layers
+// ============================
+function clearMapLayers() {
+    if (geoJsonLayer) {
+        map.removeLayer(geoJsonLayer);
+        geoJsonLayer = null;
+    }
+}
 
-        // 🔹 Get Current Month for Per Diem Lookup
-        function getCurrentMonth() {
-            const monthNames = ["Oct", "Nov", "Dec", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep"];
-            return monthNames[new Date().getMonth()];
-        }
+// ============================
+// Load ZIP Polygon Onto Map
+// ============================
+async function loadZipPolygon(zip) {
+    try {
+        const response = await fetch(`output_polygons/${zip}.geojson`);
+        if (!response.ok) throw new Error("GeoJSON not found");
+        const geoJsonData = await response.json();
+        geoJsonLayer = L.geoJSON(geoJsonData, { color: "green" }).addTo(map);
+        map.fitBounds(geoJsonLayer.getBounds());
+    } catch (err) {
+        console.warn(`No polygon found for ZIP ${zip}.`);
+    }
+}
 
-        // 🔹 Search Function
-        async function searchArea() {
-            var query = document.getElementById("searchBox").value.trim().toLowerCase();
-            if (!query) return;
+// ============================
+// Fetch Connected Areas
+// ============================
+async function getConnectedAreas(city, state) {
+    const nominatimUrl = `https://nominatim.openstreetmap.org/search?city=${encodeURIComponent(city)}&state=${encodeURIComponent(state)}&format=json&polygon_geojson=1&extratags=1`;
 
-            await loadPerDiemData();  // Ensure JSON is loaded
+    try {
+        const response = await fetch(nominatimUrl);
+        const data = await response.json();
 
-            let matchedZip = null;
-            let matchedPerDiem = null;
+        if (data.length === 0 || !data[0].geojson) return null;
+        return await getAdjacentBoundaries(data[0].osm_id, data[0].geojson);
+    } catch (err) {
+        console.error("Error fetching city polygon:", err);
+        return null;
+    }
+}
 
-            // 🔹 Search by ZIP Code
-            if (perDiemData.zip_lookup[query]) {
-                matchedZip = query;
-                matchedPerDiem = perDiemData.zip_lookup[query];
+// ============================
+// Fetch Adjacent Boundaries
+// ============================
+async function getAdjacentBoundaries(osmID, mainPolygon) {
+    const overpassQuery = `
+        [out:json];
+        relation(${osmID});
+        map_to_area;
+        (
+            way(area)[boundary=administrative];
+            relation(area)[boundary=administrative];
+        );
+        out geom;
+    `;
+
+    const overpassURL = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(overpassQuery)}`;
+
+    try {
+        const response = await fetch(overpassURL);
+        const data = await response.json();
+
+        if (!data.elements) return [];
+
+        let connectedAreas = [];
+        for (const element of data.elements) {
+            if (element.type === "relation" && element.tags.name) {
+                connectedAreas.push({
+                    name: element.tags.name,
+                    geojson: element.members.filter(m => m.type === "way").map(m => m.geometry),
+                });
             }
-            // 🔹 Search by City + State
-            else if (perDiemData.city_lookup[query]) {
-                let possibleZips = perDiemData.city_lookup[query];
-                if (possibleZips.length === 1) {
-                    matchedZip = possibleZips[0];
-                    matchedPerDiem = perDiemData.zip_lookup[matchedZip];
-                } else {
-                    alert("Multiple ZIP codes found. Please enter a ZIP code.");
-                    return;
-                }
-            }
-
-            if (!matchedZip) {
-                alert("No matching ZIP or city found.");
-                return;
-            }
-
-            // 🔹 Load ZIP boundary from FlatGeobuf
-            const zipBoundary = await loadZipBoundaries(matchedZip);
-            if (!zipBoundary) {
-                alert("ZIP boundary not found.");
-                return;
-            }
-
-            if (geojsonLayer) map.removeLayer(geojsonLayer);
-            labelLayer.clearLayers();
-
-            const currentMonth = getCurrentMonth();
-            let perDiemRate = matchedPerDiem ? matchedPerDiem[0][currentMonth] || "N/A" : "N/A";
-
-            geojsonLayer = L.geoJSON(zipBoundary, {
-                style: { color: "blue", weight: 1, fillOpacity: 0.5 },
-                onEachFeature: function (feature, layer) {
-                    let zip = feature.properties.ZCTA5CE20;
-                    layer.bindPopup(`<b>ZIP Code:</b> ${zip}<br><b>Per Diem (${currentMonth}):</b> $${perDiemRate}`);
-                    addLabel(layer, zip, perDiemRate);
-                }
-            }).addTo(map);
-
-            map.fitBounds(geojsonLayer.getBounds());
         }
+        return connectedAreas;
+    } catch (err) {
+        console.error("Error fetching adjacent areas:", err);
+        return [];
+    }
+}
 
-        // 🔹 Add Label on the Map
-        function addLabel(layer, zip, perDiemRate) {
-            if (!layer.getBounds) return;
+// ============================
+// Load Connected Areas on Map
+// ============================
+async function loadConnectedAreas(city, state) {
+    const connectedAreas = await getConnectedAreas(city, state);
 
-            var center = layer.getBounds().getCenter();
-            var label = L.marker(center, {
-                icon: L.divIcon({
-                    className: 'label-text',
-                    html: `<b>ZIP:</b> ${zip}<br><b>Lodging:</b> $${perDiemRate}`,
-                    iconSize: [110, 45],
-                    iconAnchor: [55, 22]
-                })
-            });
+    if (!connectedAreas || connectedAreas.length === 0) {
+        console.warn("No connected areas found.");
+        return;
+    }
 
-            labelLayer.addLayer(label);
-        }
-    </script>
+    for (const area of connectedAreas) {
+        if (area.geojson.length === 0) continue;
+
+        let areaPolygon = {
+            type: "Feature",
+            geometry: {
+                type: "MultiPolygon",
+                coordinates: [area.geojson.map(p => p.map(coord => [coord.lon, coord.lat]))]
+            },
+            properties: { name: area.name }
+        };
+
+        const perDiemRate = await getPerDiemForArea(area.name, state);
+        const labelText = `${area.name}\nM&IE: $${perDiemRate.meals || "N/A"}\nLodging: $${perDiemRate.lodging || "N/A"}`;
+
+        L.geoJSON(areaPolygon, {
+            style: { color: "green", weight: 2, opacity: 0.6, fillOpacity: 0.2 }
+        }).addTo(map).bindTooltip(labelText, { permanent: true, direction: "center", className: "perdiem-label" });
+    }
+}
+
+</script>
 </body>
 </html>
+
