@@ -1,8 +1,0 @@
-{
-"type": "FeatureCollection",
-"name": "70609",
-"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:EPSG::4269" } },
-"features": [
-{ "type": "Feature", "properties": { "ZCTA5CE20": "70609" }, "geometry": { "type": "Polygon", "coordinates": [ [ [ -93.215691, 30.179701 ], [ -93.214862, 30.179695 ], [ -93.213948, 30.179692 ], [ -93.213946, 30.179403 ], [ -93.213943, 30.178451 ], [ -93.214034, 30.178453 ], [ -93.215688, 30.178439 ], [ -93.215691, 30.179701 ] ] ] } }
-]
-}
