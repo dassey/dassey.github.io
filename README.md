@@ -12,7 +12,6 @@
 <a href="https://dassey.github.io/comfyui_workflow/" target="_blank">comfyui_workflow</a><br>
 <a href="https://dassey.github.io/Highway-to-Hell/" target="_blank">Highway-to-Hell</a><br>
 <a href="https://dassey.github.io/cpn/" target="_blank">cpn</a><br>
-<a href="https://dassey.github.io/MDMP/" target="_blank">MDMP</a><br>
 <a href="https://dassey.github.io/stl/" target="_blank">stl</a><br>
 <a href="https://dassey.github.io/SayWho/" target="_blank">SayWho</a><br>
 <a href="https://dassey.github.io/spec/" target="_blank">spec</a><br>
