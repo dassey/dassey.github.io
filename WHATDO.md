@@ -1,77 +1,74 @@
 # What Do
 
-Brief synopsis of each repo. Last push date noted to help decide what to keep.
+Brief synopsis of each repo. Last push date noted to help decide what to keep. Reviewed 2026-11-19.
 
 ## Web apps (GitHub Pages)
 
-**PNG** — https://dassey.github.io/png/
-PNG Metadata Auditor. Drop a PNG/APNG and inspect its chunks and metadata. Runs locally in the browser. Last push 2025-11.
+**lawn** — https://dassey.github.io/lawn/
+Lawn & Garden Almanac. Month-by-month plan for lawn, flower beds and vegetable garden, fitted to any US ZIP code. Looks up local weather history, estimates frost dates and hardiness zone, picks the usual grass (six cool- and warm-season grasses), and puts each job on its best day of the live forecast. Calendar, journal, products, library, .ics export. Every task cites its source and evidence strength. Static, no build, no accounts. Last push 2026-11.
 
-**TRF** — https://dassey.github.io/TRF/
-Travel Request Form. Fills in traveler info, event, air/hotel/car/per diem requirements for MTC travel. Last push 2026-09.
+**Cruncher** — https://dassey.github.io/Cruncher/
+Neon-synthwave VR math brawler for Meta Quest 3 (WebXR, Meta Immersive Web SDK, TypeScript). A rule flashes overhead (multiples of 7, make 24, factors of 36) and you punch the number blocks that fit while "Bugz" attack; boss round every 5th. A hidden spaced-repetition engine serves the times-table facts the kid is weakest on. Also plays on desktop with the mouse. Auto-deploys from `main` by GitHub Actions. Last push 2026-11.
 
-**Northland (BBB)** — https://dassey.github.io/BBB/
-Northland Driving business site. Driving lessons for adult women in Gladstone, MO. Pricing, permit help, quiz, contact, booking. Last push 2026-08.
-
-**perdiem** — https://dassey.github.io/perdiem/
-US Per Diem Rate Optimizer. Search by city/state/ZIP and compare nearby GSA per diem rates for FY2024 to FY2026. Last push 2026-07.
-
-**TRN (Trip-Report-Notes)** — https://dassey.github.io/Trip-Report-Notes/
-Trip Report Notes. Phone app to fill in your section of a Word trip report offline. Create/upload missions, upload a .docx template, node status board. Last push 2026-09.
-
-**svg** — https://dassey.github.io/svg/
-Text to SVG Name Tag. Type text, pick font/size/canvas, auto-fit, download SVG or PNG. Defaults to business card size. Last push 2025-08. Tiny, one page.
+**ArmorFit** — https://dassey.github.io/ArmorFit/
+Fits 3D-printable cosplay armor to your body in the browser. Enter measurements (or get 13 of them from a front and side photo, detected on-device), drop in STL/OBJ/3MF pieces, place them on a mannequin built to your size, see a tight/good/loose gap heatmap, auto-scale, export print-ready files. Fully client-side. Last push 2026-10.
 
 **skyline-forge** — https://dassey.github.io/skyline-forge/
-3D-printable city maps. Pick an area from OpenStreetMap or your own GeoJSON/KML/Shapefile, choose layers and colors, export color 3MF or STL. Last push 2026-08.
+3D-printable city maps. Search a US city, neighbourhood or address, pick plate shape, layers and colours, add a route or your own data, export 3MF, STL or OBJ. Groups layers onto the filaments your printer has; the 3MF opens in Bambu Studio/OrcaSlicer with parts already assigned. Building heights and roofs come from USGS LiDAR where available. Last push 2026-11.
 
 **BetterNotes** — https://dassey.github.io/BetterNotes/
-Offline handwriting and notes PWA for iPad/iPhone. Apple Pencil ink, text, images, infinite or page canvas. All data stays on device. Last push 2026-09.
-
-**tools** — https://dassey.github.io/tools/
-Small links page plus an HTML source extractor that fetches a URL's HTML (with a CORS proxy fallback). Last push 2025-05. Links list is stale.
-
-**HBG** — https://dassey.github.io/HBG/
-Hoarders Be Gone. Convert a JPG/PNG image into a heightmap STL for 3D printing. Extrusion depth, base thickness, smoothing, invert. Last push 2025-05. Overlaps with stl and skyline-forge only loosely.
-
-**comfyui_workflow** — https://dassey.github.io/comfyui_workflow/
-ComfyUI Video Workflow Extractor. Pulls the embedded ComfyUI workflow JSON out of a generated video file. Last push 2026-08.
+Offline handwriting and notes PWA for iPad/iPhone. Apple Pencil ink, text, images, lecture audio, and Recall: anything you highlight becomes a spaced-repetition flashcard. All data stays on device. Last push 2026-11.
 
 **Highway-to-Hell** — https://dassey.github.io/Highway-to-Hell/
-US road deaths mapped. Every NHTSA FARS fatal crash 2001 to 2024, drillable from national map to individual crash. Largest repo at about 96 MB. Last push 2026-09.
-
-**cpn** — https://dassey.github.io/cpn/
-Knight's Descent. Browser side-scrolling platformer/action game with keyboard and touch controls. Repo language is PowerShell so it likely also holds unrelated scripts. Last push 2026-07.
-
-**MDMP** — https://dassey.github.io/MDMP/
-MDMP Harness Walkthrough. Captured run of a Military Decision Making Process planning tool (Operation Iron Anvil, 2nd BCT) presented as a readable page for doctrine review. Python source. Last push 2026-08.
-
-**stl** — https://dassey.github.io/stl/
-Mobile STL Viewer. Upload an STL, rotate/zoom/pan on a phone, wireframe/grid/axes, screenshot. Last push 2025-05.
+US road deaths mapped. Every located NHTSA FARS fatal crash 2001 to 2024 (898,888 deaths, 821,145 crashes). National heat field that resolves to individual crash dots with the full case file; breakdowns by who died and why, pin with 1–10 mile ring, road search, route check. Largest repo (about 400 MB checked out, 4,600+ files). Last push 2026-10.
 
 **SayWho** — https://dassey.github.io/SayWho/
-Book Dialogue Speaker Tagger. Upload a manuscript (.md/.txt/.docx/.pdf) and it identifies who is speaking and wraps each line in [NAME] tags for TTS or analysis. Last push 2026-03.
+Book Dialogue Speaker Tagger. Upload a manuscript and it identifies who is speaking and tags each line of dialogue for TTS or analysis. Three files, no build. Last push 2026-10.
+
+**TRN (Trip-Report-Notes)** — https://dassey.github.io/Trip-Report-Notes/
+Trip Report Notes. Phone PWA that fills in one person's section of a Word trip report offline. Notes stay on the device and export as .docx or plain text. Missions can be made without a template; a summary board exports as .pptx. Last push 2026-10.
 
 **spec** — https://dassey.github.io/spec/
-Wavefield. Zoomable visualization of the radio spectrum from 300 kHz to 100 GHz with US allocation comparison. Created 2026-09-13.
+Wavefield. Zoomable visualization of the radio spectrum from 300 kHz to 100 GHz where every line is a real channel (AM/FM, ham, LoRa, Wi-Fi, Bluetooth, cellular, GPS, radar). Zoom down to the signal shape, inspect a channel, compare two side by side, US/EU regions. Its README still says "enable GitHub Pages"; the page is already live. Last push 2026-09.
+
+**TRF** — https://dassey.github.io/TRF/
+Travel Request Form. Fills in traveler info, event, air/hotel/car/per diem requirements for MTC travel and writes them into a PDF with pdf-lib. README is a one-word stub. Last push 2026-09.
+
+**Northland (BBB)** — https://dassey.github.io/BBB/
+Northland Driving business site. One-on-one driving lessons for adult women in Gladstone, MO and the KC Northland, in English or Tagalog (header toggle). Home, drivers, pricing, Missouri permit guide, permit practice quiz, contact/booking. Has a CNAME for a custom domain. Last push 2026-08.
+
+**perdiem** — https://dassey.github.io/perdiem/
+US Per Diem Rate Optimizer. Search by city/state/ZIP and compare nearby GSA per diem rates. No README. Last push 2026-07.
+
+**P2H** — https://dassey.github.io/P2H/
+PPTX2HTML (fork). Upload a .pptx and download one self-contained HTML slideshow that works offline. Two modes: keep the original PowerPoint layout, or re-flow the content into a clean themeable template. Themes, nav options, animated canvas backgrounds, speaker notes, image recompression. Runs in the browser. Last push 2026-06. Not linked from the README before now.
 
 ## Code only (no web page)
 
-**DarkJiggle** — https://github.com/dassey/DarkJiggle
-Windows tray utility in Zig. Jiggles the mouse invisibly to keep the PC awake and dims the monitors while you are away. Last push 2026-08.
-
-**wint-manual-builder** — https://github.com/dassey/wint-manual-builder
-Source-cited WIN-T tactical network manual content (JNN/CPN/CUCM/GAIT-IVPN) plus a Python GUI/CLI that assembles custom .docx guides from tagged instruction sets. Last push 2026-04.
+**vibecut** — https://github.com/dassey/vibecut
+VibeCut, a Blender 5.1 addon for articulated 3D-print prep. Cuts organic meshes into parts joined by ball-and-socket joints or hinges, with joint auto-detection and placement gizmos. Includes a Support Wizard that builds printable supports (pillars, trees, cradles) per overhang region, an overhang heatmap, and a matching Bambu Studio print profile. README is one line; `SUPPORTS_GUIDE.md` is the real documentation. Last push 2026-11.
 
 **YABlenderMCP** — https://github.com/dassey/YABlenderMCP
-MCP server plus Blender addon giving AI agents control of Blender 5.1. 48 tools across 10 domains, fully local. Last push 2026-04.
+MCP server plus Blender addon giving AI agents control of Blender 5.1: modeling, materials, lighting, animation, rendering, 3D-print prep. 106 tools, 4 prompts and a skill. Local only; published on PyPI as `yab-mcp`. Last push 2026-11.
 
-**SaveImage** — https://github.com/dassey/SaveImage
-Chrome extension. Right-click any image and save it as PNG, JPG, BMP, or WEBP regardless of the original format. Handles CORS-blocked images. Last push 2026-03.
+**DarkJiggle** — https://github.com/dassey/DarkJiggle
+Windows tray utility in Zig. Jiggles the mouse invisibly to keep the PC awake and dims the monitors while you are away; backs off when you touch the mouse. Last push 2026-08.
+
+**wint-manual-builder** — https://github.com/dassey/wint-manual-builder (private)
+WIN-T field support docs. Study notes and one-task phone handouts for supporting JNN, CPN and STT in the field (AO16, Palo Alto firewall, CUCM 14), plus a field-issue catalog and a script that searches trip-report PDFs by topic. The original .docx manual builder now sits in `archive/` and is marked as mostly wrong, so the repo name no longer matches the content. Last push 2026-11.
+
+## Empty or gutted
+
+- **stl** — repo still exists but holds only a one-line README; the Mobile STL Viewer and its page are gone (emptied 2026-11-14).
+- **DoShorts** — created, no commits on any branch.
+- **mcp** — created, no commits on any branch.
+
+## Gone since the last review
+
+These no longer resolve (repo not reachable, Pages URL returns 404), so they were removed from the README: **png** (PNG Metadata Auditor), **svg** (name tag generator), **tools** (links page), **HBG** (image to heightmap STL), **comfyui_workflow** (video workflow extractor), **cpn** (Knight's Descent), **MDMP** (harness walkthrough), **SaveImage** (Chrome extension), **gen**.
 
 ## Candidates to consider deleting
 
-- **tools** — stale link list and a trivial HTML fetcher.
-- **svg** — single-purpose name tag generator, untouched for a year.
-- **HBG** and **stl** — small 2025 one-offs, untouched since May 2025.
-- **gen** — already gone, removed from the README.
+- **stl**, **DoShorts**, **mcp** — nothing in them.
+- **P2H** — a fork, untouched since June 2026; keep only if you still use it.
+- **wint-manual-builder** — keep, but rename to match what it is now.
